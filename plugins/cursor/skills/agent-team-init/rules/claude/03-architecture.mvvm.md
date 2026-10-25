@@ -1,0 +1,19 @@
+---
+paths:
+  - "lib/**/*.dart"
+---
+<!-- MVVM layer boundaries for Dart files -->
+
+# Architecture: MVVM (feature-first)
+
+`View -> ViewModel -> Repository -> DataSource`. Full guide: the `architecture-mvvm` skill.
+
+| Part | Must not import |
+| --- | --- |
+| View (pages, widgets) | repositories, data sources, Dio, databases |
+| ViewModel (Cubit or notifier) | data sources, Dio, databases, `BuildContext` |
+| Repository / DataSource | widgets, state-management packages |
+
+- ViewModels depend on abstract repositories only.
+- Repositories own caching and fallbacks; data sources stay thin and throw.
+- No domain or use-case layer unless the user approves it for a specific reason.

@@ -1,0 +1,13 @@
+---
+paths:
+  - "test/**"
+  - "integration_test/**"
+---
+<!-- Test rules -->
+
+# Testing
+
+- No real network or secrets; fakes of contracts first; new test packages need approval.
+- Test behaviour, not internals; name tests by behaviour.
+- A new test must be seen failing once; flaky tests are fixed, never retried.
+- Never change production code just to make a test pass.

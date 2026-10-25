@@ -1,0 +1,15 @@
+{
+  "name": "flutter-agent-team",
+  "owner": { "name": "MokarmDev" },
+  "metadata": {
+    "description": "Flutter Agent Team: role-based AI agents, skills, rules and guard hooks for Flutter apps.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "flutter-agent-team",
+      "source": "./plugins/cursor",
+      "description": "A team of Flutter AI agents with skills, rules and guard hooks that adapt to your project's architecture and state management."
+    }
+  ]
+}

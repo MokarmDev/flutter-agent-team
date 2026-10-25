@@ -1,0 +1,23 @@
+{
+  "name": "flutter-agent-team",
+  "displayName": "Flutter Agent Team",
+  "version": "0.1.0",
+  "description": "A team of Flutter AI agents (product, architecture, UI, data, QA, review, debugging) with skills, rules and guard hooks that adapt to your project's architecture and state management.",
+  "author": {
+    "name": "MokarmDev",
+    "url": "https://github.com/MokarmDev"
+  },
+  "homepage": "https://github.com/MokarmDev/flutter-agent-team",
+  "repository": "https://github.com/MokarmDev/flutter-agent-team",
+  "license": "MIT",
+  "keywords": [
+    "flutter",
+    "dart",
+    "mobile",
+    "agents",
+    "clean-architecture",
+    "mvvm",
+    "bloc"
+  ],
+  "logo": "assets/icon.png"
+}

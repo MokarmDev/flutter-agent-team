@@ -1,0 +1,33 @@
+name: Experience
+description: Share a rule, decision, checklist or mistake from real Flutter projects
+labels: [experience]
+body:
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Which agent should know this?
+      options: [All agents, product-manager, architect, flutter-developer, data-integrator, qa-engineer, code-reviewer, bug-investigator, Not sure]
+    validations:
+      required: true
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type
+      options: [Rule (always / never), Decision (when X, do Y), Checklist, Mistake I have seen, Code pattern, Tool or package choice]
+    validations:
+      required: true
+  - type: textarea
+    id: experience
+    attributes:
+      label: Your experience
+      description: One rule, decision or mistake per issue. Short is fine.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why / the story behind it
+  - type: input
+    id: source
+    attributes:
+      label: Official source (if any)

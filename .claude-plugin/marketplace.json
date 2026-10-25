@@ -1,0 +1,14 @@
+{
+  "name": "flutter-agent-team",
+  "owner": { "name": "MokarmDev", "url": "https://github.com/MokarmDev" },
+  "description": "Flutter Agent Team: role-based AI agents, skills, rules and guard hooks for Flutter apps.",
+  "plugins": [
+    {
+      "name": "flutter-agent-team",
+      "description": "A team of Flutter AI agents with skills, rules and guard hooks that adapt to your project's architecture and state management.",
+      "category": "development",
+      "tags": ["flutter", "dart", "mobile", "agents"],
+      "source": "./plugins/claude-code"
+    }
+  ]
+}

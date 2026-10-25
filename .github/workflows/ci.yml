@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  plugins:
+    name: Plugins (lint, build check, hook tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Hook tests
+        run: npm test
+      - name: Lint sources and check plugins/ is up to date
+        run: node tool/build.mjs --check
+
+  references:
+    name: Reference app (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [mvvm-cubit, clean-bloc]
+    defaults:
+      run:
+        working-directory: references/${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Environment file from example
+        run: cp lib/config/env/.env.example lib/config/env/.env
+      - run: flutter pub get
+      - name: Code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+      - name: Test
+        run: flutter test

@@ -1,0 +1,31 @@
+# Flutter Agent Team project config. Commit this file; it holds no secrets.
+version: 1
+
+profile:
+  architecture: mvvm          # clean | mvvm   (getx from v0.2)
+  state: bloc                 # bloc           (riverpod, getx from v0.2)
+  routing: go_router          # go_router      (getx from v0.2)
+  local_db: [hive_ce]         # hive_ce | hive (legacy) | sqflite   (drift, isar, objectbox from v0.3)
+  backend: rest               # rest           (firebase, supabase from v0.3)
+  monitoring: []              # crashlytics | sentry | firebase_analytics (from v0.3)
+
+tracker: local                # local | github | jira | linear | trello
+project: ""                   # GitHub owner/repo, Jira or Linear team key, Trello board ID; empty for local
+statuses:                     # canonical -> tracker's own names
+  backlog: Backlog
+  ready: Ready
+  in_progress: In Progress
+  in_review: In Review
+  done: Done
+write_mode: confirm           # confirm | auto | read-only
+branch_pattern: "{type}/{id}-{slug}"
+definition_of_ready:
+  - acceptance_criteria
+  - design_link_or_none
+  - api_contract_or_blocked
+
+hooks:                        # set any to false to disable
+  block_generated_edits: true
+  block_secret_reads: true
+  block_destructive_shell: true
+  format_dart_on_edit: true

@@ -1,0 +1,34 @@
+name: Agent misbehaved
+description: An agent invented something, ignored a rule, broke the architecture, or reported a check it did not run
+labels: [agent-bug]
+body:
+  - type: input
+    id: tool
+    attributes:
+      label: Tool and model
+      placeholder: Claude Code 2.x with ..., or Cursor ... with ...
+    validations:
+      required: true
+  - type: input
+    id: profile
+    attributes:
+      label: Project profile (from .agent-team.yaml)
+      placeholder: "architecture: mvvm, state: bloc"
+  - type: textarea
+    id: prompt
+    attributes:
+      label: Command or prompt you gave
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should have happened
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened (paste the relevant part, remove secrets)
+    validations:
+      required: true
