@@ -9,6 +9,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { lintReferenceApps } from './reference-apps.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = path.join(ROOT, 'src');
@@ -276,39 +277,9 @@ for (const f of await walk(SRC)) {
 
 // ---------- reference apps share one core ----------
 // lib/core must be identical across reference apps (except DI wiring), so a fix lands everywhere.
+// Expected apps are always required (missing references/ used to skip this check silently).
 
-const REF = path.join(ROOT, 'references');
-if (await exists(REF)) {
-  const apps = (await fs.readdir(REF, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name).sort();
-  const coreOf = async (app) => {
-    const dir = path.join(REF, app, 'lib/core');
-    const map = new Map();
-    if (!await exists(dir)) return map;
-    for (const f of await walk(dir)) {
-      const rel = path.relative(dir, f).split(path.sep).join('/');
-      if (rel.startsWith('di/')) continue;
-      map.set(rel, await fs.readFile(f, 'utf8'));
-    }
-    return map;
-  };
-  if (apps.length > 1) {
-    const base = await coreOf(apps[0]);
-    for (const app of apps.slice(1)) {
-      const other = await coreOf(app);
-      for (const rel of new Set([...base.keys(), ...other.keys()])) {
-        if (base.get(rel) !== other.get(rel)) err(`references: lib/core/${rel} differs between ${apps[0]} and ${app}`);
-      }
-    }
-  }
-  for (const app of apps) {
-    for (const required of ['.agent-team.yaml', 'docs/agent-context.md']) {
-      if (!await exists(path.join(REF, app, required))) err(`references/${app}: missing ${required}`);
-    }
-    for (const forbidden of ['lib/config/env/.env', 'lib/config/env/env.g.dart']) {
-      if (await exists(path.join(REF, app, forbidden))) err(`references/${app}: ${forbidden} must not be committed`);
-    }
-  }
-}
+for (const m of await lintReferenceApps(ROOT)) err(m);
 
 // ---------- write or check ----------
 
