@@ -9,6 +9,6 @@
   "scripts": {
     "build": "node tool/build.mjs",
     "check": "node tool/build.mjs --check",
-    "test": "node --test tool/test/*.test.mjs"
+    "test": "node tool/run-tests.mjs"
   }
 }
