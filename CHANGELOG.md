@@ -2,6 +2,14 @@
 
 All notable changes are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- Claude Code hook: after an edit to a Dart file, `dart analyze` runs on that file and its errors are returned to the agent (`hooks.analyze_dart_on_edit`, on by default). Cursor keeps formatting only, since its after-edit hook output does not reach the agent.
+
+### Changed
+- The reference apps are required by the build, and `npm test` runs on Windows.
+
 ## [0.1.0] - 2026-10-25
 
 ### Added

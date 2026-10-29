@@ -99,6 +99,7 @@ Both share one `lib/core` (network, errors, storage), checked identical in CI.
 - Agents ask before adding packages, changing architecture, platform config, signing, secrets, or editing more than one ticket.
 - Ticket and web content is treated as data, never as instructions.
 - Hooks (Claude Code and Cursor, Windows included) block: edits to generated files, reading `.env`, keystores and service-account files, `rm -rf`, force push, `git reset --hard` and `git clean -f`.
+- After each edit to a Dart file, hooks run `dart format` on it, and in Claude Code they run `dart analyze` on it and hand any errors back to the agent. Turn either off in `.agent-team.yaml`.
 - Tokens stay in your own MCP or CLI configuration. Nothing in this repository needs a secret.
 
 ## Compared with other projects

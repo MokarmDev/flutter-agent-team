@@ -1,11 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { isGenerated, isSecretFile, shellViolation, hasTicketId, readHookConfig, decide } from '../../src/hooks/guard.mjs';
+import { isGenerated, isSecretFile, shellViolation, hasTicketId, readHookConfig, decide, parseAnalyzerMachine, analysisFeedback } from '../../src/hooks/guard.mjs';
 
 const GUARD = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../src/hooks/guard.mjs');
 const defaults = readHookConfig(null);
@@ -81,4 +81,61 @@ test('Cursor protocol: JSON permission on stdout', () => {
 test('garbage input never crashes', () => {
   const r = spawnSync(process.execPath, [GUARD, 'pre-shell'], { input: 'not json', encoding: 'utf8' });
   assert.equal(r.status, 0);
+});
+
+test('analyzer machine output is parsed, escapes included', () => {
+  const out = [
+    'ERROR|COMPILE_TIME_ERROR|UNDEFINED_OPERATOR|C:\\w\\lib\\a.dart|3|4|1|The operator \'\|\' isn\'t defined for the type \'Type\'.',
+    'WARNING|STATIC_WARNING|UNUSED_LOCAL_VARIABLE|C:\\w\\lib\\a.dart|2|10|1|The value of the local variable \'s\' isn\'t used.',
+    'Analyzing a.dart...',
+    '',
+  ].join('\n');
+  const issues = parseAnalyzerMachine(out);
+  assert.equal(issues.length, 2);
+  assert.deepEqual(issues[0], {
+    severity: 'ERROR', code: 'UNDEFINED_OPERATOR', file: 'C:\w\lib\a.dart',
+    line: 3, column: 4, message: 'The operator \'|\' isn\'t defined for the type \'Type\'.',
+  });
+  assert.equal(issues[1].severity, 'WARNING');
+});
+
+test('analysis feedback reports errors only, capped', () => {
+  const err = (n) => ({ severity: 'ERROR', code: 'INVALID_ASSIGNMENT', line: n, column: 1, message: `bad ${n}` });
+  const warn = { severity: 'WARNING', code: 'UNUSED_LOCAL_VARIABLE', line: 1, column: 1, message: 'unused' };
+  assert.equal(analysisFeedback([warn], 'lib/a.dart'), null);
+  const msg = analysisFeedback([warn, err(2)], 'lib/a.dart');
+  assert.match(msg, /1 error\(s\) in "lib\/a\.dart"/);
+  assert.match(msg, /2:1 invalid_assignment: bad 2/);
+  assert.doesNotMatch(msg, /unused/);
+  const many = analysisFeedback(Array.from({ length: 12 }, (_, i) => err(i + 1)), 'lib/a.dart', 10);
+  assert.match(many, /and 2 more/);
+  assert.doesNotMatch(many, /bad 11/);
+});
+
+test('analysis on edit is on by default and can be disabled', () => {
+  assert.equal(defaults.analyze_dart_on_edit, true);
+  const dir = mkdtempSync(path.join(tmpdir(), 'fat-'));
+  writeFileSync(path.join(dir, '.agent-team.yaml'), 'hooks:\n  analyze_dart_on_edit: false\n');
+  assert.equal(readHookConfig(dir).analyze_dart_on_edit, false);
+});
+
+const hasDart = spawnSync('dart', ['--version'], { stdio: 'ignore', shell: process.platform === 'win32' }).status === 0;
+
+test('Claude Code post-edit returns analyzer errors with exit 2', { skip: !hasDart && 'dart not on PATH', timeout: 120000 }, () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'fat-an-'));
+  mkdirSync(path.join(dir, 'lib'));
+  writeFileSync(path.join(dir, 'pubspec.yaml'), 'name: fat_an\nenvironment:\n  sdk: ">=3.0.0 <4.0.0"\n');
+  writeFileSync(path.join(dir, 'lib/bad.dart'), 'void f() {\n  final String s = 1;\n  print(s);\n}\n');
+  writeFileSync(path.join(dir, 'lib/good.dart'), 'void g() {\n  print(1);\n}\n');
+  writeFileSync(path.join(dir, '.agent-team.yaml'), 'hooks:\n  format_dart_on_edit: false\n');
+  const post = (file, extra = {}) => spawnSync(process.execPath, [GUARD, 'post-edit'], {
+    input: JSON.stringify({ hook_event_name: 'PostToolUse', tool_name: 'Edit', tool_input: { file_path: path.join(dir, file) } }),
+    encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: dir, ...extra },
+  });
+  const bad = post('lib/bad.dart');
+  assert.equal(bad.status, 2, bad.stderr);
+  assert.match(bad.stderr, /2:\d+ invalid_assignment/);
+  assert.equal(post('lib/good.dart').status, 0);
+  writeFileSync(path.join(dir, '.agent-team.yaml'), 'hooks:\n  format_dart_on_edit: false\n  analyze_dart_on_edit: false\n');
+  assert.equal(post('lib/bad.dart').status, 0);
 });

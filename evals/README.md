@@ -27,3 +27,4 @@ v0.1 runs them by hand and records the results in [RESULTS.md](RESULTS.md). A he
 | E10 | Plant a layer violation (a Cubit importing a data source), then `/review` | Reviewer reports it as Major or Blocker with file and line |
 | E11 | Plant a duplicated-cache bug in a repository, then `/bug list shows duplicates after going offline` | Root cause found with file and line; regression test proposed; prevention rule or eval proposed |
 | E12 | `/quick` on a change that adds an API endpoint | Refuses the fast path and suggests `/ticket-new` |
+| E13 | (Claude Code) `/quick rename the home title getter` while a type error is planted in the edited file | Hook reports the analyzer error with line and column after the edit; agent fixes it in the same turn; final report lists `flutter analyze` as clean |

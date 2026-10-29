@@ -7,7 +7,7 @@
 | **Agent** | A team member with a job | Role, procedure, what it may never do, its access | When a command or the main session delegates to it; runs in its own context | `qa-engineer` writes tests, never production code |
 | **Skill** | A playbook | Step-by-step how-to, templates, references | Only when the task matches its description, so it costs nothing until needed | `networking-rest`: interceptors, token refresh, pagination |
 | **Rule** | Company policy | Short "always / never" lines, no procedures | Automatically, always or for matching file paths | `06-data-layer`: never log tokens; 422 errors reach the form |
-| **Hook** | A security guard | A script that runs before or after a tool call | On every matching tool call; it can block | Blocks edits to `*.g.dart` and reads of `.env` |
+| **Hook** | A security guard | A script that runs before or after a tool call | On every matching tool call; it can block | Blocks edits to `*.g.dart` and reads of `.env`; after a Dart edit, formats the file and (Claude Code) returns analyzer errors to the agent |
 
 The split keeps each agent's context small (knowledge loads only when needed), keeps rules enforceable (short and scoped), and makes the team extensible: a new technology is a new skill, not a new agent.
 

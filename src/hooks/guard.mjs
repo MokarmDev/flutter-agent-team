@@ -86,6 +86,7 @@ export function readHookConfig(root) {
     block_secret_reads: true,
     block_destructive_shell: true,
     format_dart_on_edit: true,
+    analyze_dart_on_edit: true,
     require_ticket_branch: false,
   };
   const file = root ? path.join(root, '.agent-team.yaml') : null;
@@ -160,11 +161,67 @@ export function decide(check, ctx, config, branch = null) {
   }
 }
 
+// Splits `dart analyze --format=machine` output into issues.
+// Line shape: SEVERITY|TYPE|CODE|FILE|LINE|COLUMN|LENGTH|MESSAGE, with `|` and `\` escaped by a backslash.
+export function parseAnalyzerMachine(text) {
+  const issues = [];
+  for (const line of String(text || '').split(/\r?\n/)) {
+    const fields = [];
+    let cur = '';
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '\\' && i + 1 < line.length) { cur += line[++i]; continue; }
+      if (c === '|') { fields.push(cur); cur = ''; continue; }
+      cur += c;
+    }
+    fields.push(cur);
+    if (fields.length < 8 || !/^(ERROR|WARNING|INFO)$/.test(fields[0])) continue;
+    issues.push({
+      severity: fields[0], code: fields[2], file: fields[3],
+      line: Number(fields[4]), column: Number(fields[5]), message: fields.slice(7).join('|'),
+    });
+  }
+  return issues;
+}
+
+// Feedback for the agent when the edited file has analyzer errors; null when it has none.
+// Warnings and infos are left to the agent's own `flutter analyze` run, so mid-change noise stays low.
+export function analysisFeedback(issues, file, max = 10) {
+  const errors = issues.filter((i) => i.severity === 'ERROR');
+  if (!errors.length) return null;
+  const shown = errors.slice(0, max).map((e) => `  ${e.line}:${e.column} ${e.code.toLowerCase()}: ${e.message}`);
+  const more = errors.length > max ? `\n  ...and ${errors.length - max} more` : '';
+  return `dart analyze found ${errors.length} error(s) in "${file}":\n${shown.join('\n')}${more}\n`
+    + 'Fix them before reporting the change as done. If they come from a step of this change you have not made yet, continue and re-check.';
+}
+
+function runDart(args, ctx, timeout) {
+  // shell is needed on Windows, where `dart` is often a .bat wrapper; quote the path for it.
+  const win = process.platform === 'win32';
+  const file = win ? `"${ctx.file}"` : ctx.file;
+  return execFileSync('dart', [...args, file], { cwd: ctx.root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout, shell: win });
+}
+
+function isEditableDart(file) {
+  return file.endsWith('.dart') && !isGenerated(file);
+}
+
 function formatDart(ctx) {
-  if (!ctx.file.endsWith('.dart') || isGenerated(ctx.file)) return;
+  if (!isEditableDart(ctx.file)) return;
+  try { runDart(['format'], ctx, 30000); } catch { /* dart not on PATH or format failed: never block on formatting */ }
+}
+
+function analyzeDart(ctx) {
+  if (!isEditableDart(ctx.file)) return null;
+  let out;
   try {
-    execFileSync('dart', ['format', ctx.file], { cwd: ctx.root, stdio: 'ignore', timeout: 30000, shell: process.platform === 'win32' });
-  } catch { /* dart not on PATH or format failed: never block on formatting */ }
+    out = runDart(['analyze', '--format=machine'], ctx, 45000);
+  } catch (e) {
+    // Exit codes 1-3 mean issues were found; anything else (dart missing, timeout) is skipped silently.
+    if (typeof e.stdout !== 'string' || !e.stdout) return null;
+    out = e.stdout;
+  }
+  return analysisFeedback(parseAnalyzerMachine(out), ctx.file);
 }
 
 async function main() {
@@ -177,7 +234,17 @@ async function main() {
 
   if (check === 'post-edit') {
     if (config.format_dart_on_edit) formatDart(ctx);
-    if (cursor) process.stdout.write('{}');
+    if (cursor) {
+      // Cursor's afterFileEdit output is not shown to the agent, so analysis runs only for Claude Code.
+      process.stdout.write('{}');
+      process.exit(0);
+    }
+    // Claude Code shows PostToolUse stderr to the agent when the hook exits 2; the edit itself already happened.
+    const feedback = config.analyze_dart_on_edit ? analyzeDart(ctx) : null;
+    if (feedback) {
+      process.stderr.write(`[flutter-agent-team] ${feedback}\n`);
+      process.exit(2);
+    }
     process.exit(0);
   }
   const branch = check === 'pre-shell' && /\bgit\s+commit\b/.test(ctx.command) ? currentBranch(ctx.cwd) : null;
